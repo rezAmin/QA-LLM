@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" xmlns="" xmlns="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سوال و پاسخ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+
+    body {
+    background-color: #121212;
+    color: #e0e0e0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+}
+
+.history {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    width: 300px;
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    box-shadow: 0 0 0.25rem rgba(0, 0, 0, 0.2);
+    overflow-y: auto;
+    max-height: 80vh;
+    direction: rtl;
+}
+
+.history ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    direction: ltr;
+}
+
+.history ul li {
+    margin-bottom: 1rem;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.5rem;
+    position: relative;
+    text-align: right;
+}
+
+.history ul li:hover {
+    background-color: #333;
+}
+
+.answer-text {
+    display: none;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    background-color: #2e2e2e;
+    border: 1px solid #333;
+    border-radius: 0.25rem;
+}
+
+.loading-message {
+    display: none;
+    background-color: #1e1e1e;
+    padding: 0.5rem;
+    border: 1px solid #333;
+    border-radius: 0.25rem;
+}
+
+.container {
+    margin-left: 350px;
+    width: calc(100% - 350px);
+    padding: 2rem;
+    background-color: #1e1e1e;
+    border-radius: 0.25rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.username {
+    font-size: 1rem;
+    color: #bb86fc;
+}
+
+.logout-link {
+    color: #bb86fc;
+    text-decoration: none;
+}
+
+.logout-link:hover {
+    text-decoration: underline;
+}
+
+h1 {
+    color: #bb86fc;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    color: #e0e0e0;
+}
+
+.form-select,
+.form-control {
+    background-color: #1e1e1e;
+    margin-top: 10px;
+    border: 1px solid #333;
+    color: #e0e0e0;
+}
+
+.form-select:focus,
+.form-control:focus {
+    border-color: #bb86fc;
+    box-shadow: 0 0 0 0.2rem rgba(187, 134, 252, 0.25);
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+.form-control::placeholder {
+    color: #757575;
+}
+
+.btn-primary {
+    background-color: #bb86fc;
+    border-color: #bb86fc;
+    color: #121212;
+}
+
+.btn-primary:hover {
+    background-color: #9a67ea;
+    border-color: #7a53c7;
+}
+
+.btn-secondary {
+    background-color: #333;
+    border-color: #333;
+    color: #e0e0e0;
+}
+
+.btn-secondary:hover {
+    background-color: #444;
+    border-color: #555;
+}
+
+.answer-card {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    box-shadow: 0 0 0.25rem rgba(0, 0, 0, 0.2);
+}
+
+#question-form button {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+}
+
+.keywords-form {
+    display: none;
+    margin-top: 1rem;
+}
+
+.alert-danger {
+    background-color: #cf6679;
+    border-color: #f44336;
+    color: #121212;
+}
+
+.alert-success {
+    background-color: #03dac5;
+    border-color: #018786;
+    color: #121212;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+
+</style>
+
+</head>
+<body>
+    <div class="history">
+        <h5>سابقه سوالات</h5>
+        <ul id="questionHistory">
+            <!-- سوالات اضافه شده به تاریخچه -->
+            {% for item in questions_with_answers %}
+                <li data-id="{{ item.id }}">
+                    {{ item.text }}
+                    <div class="answer-text" id="answer-{{ item.id }}" style="display: none;">
+                        {{ item.answer }}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div class="username">نام کاربر: {{ user.username }}</div>
+            <a href="{% url 'logout' %}" class="logout-link">خروج</a>
+        </div>
+
+        <h1>سوال و پاسخ</h1>
+
+        <div class="mb-4">
+            <label for="questionType" class="form-label"></label>
+            <select class="form-select form-select-sm" id="questionType">
+                <option value="general" selected>سوال از کل عناوین</option>
+                <option value="specific">سوال از یک عنوان</option>
+            </select>
+        </div>
+
+        <!-- فرم سوال -->
+        <form id="question-form">
+            <div id="specific-fields" style="display: none;">
+                <div class="mb-4">
+                    <select class="form-select form-select-sm" id="titleSelect">
+                        <option value="" disabled selected>یک عنوان انتخاب کنید</option>
+                        {% for title in titles %}
+                            <option value="{{ title }}">{{ title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- نمایش محتوای عنوان انتخاب شده -->
+                <div id="contentDisplay" style="display: none;">
+                    <h5 id="contentTitle"></h5>
+                    <p id="contentLead"></p>
+                    <div id="contentText"></div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+
+                <textarea class="form-control form-control-sm" id="questionInput" rows="3" placeholder="سوال خود را وارد کنید" required></textarea>
+            </div>
+
+            <!-- فرم کلمات کلیدی -->
+            <div class="mb-3" id="keywords-section">
+                <label class="form-label">استفاده از کلمات کلیدی:</label>
+                <input type="checkbox" id="useKeywords" class="form-check-input">
+                <label for="useKeywords" class="form-check-label">بله</label>
+
+                <div class="keywords-form" id="keywordsForm">
+                    <label for="keywordsInput" class="form-label">کلمات کلیدی (با ویرگول جدا کنید):</label>
+                    <input type="text" id="keywordsInput" class="form-control form-control-sm" placeholder="کلمات کلیدی را وارد کنید">
+                </div>
+            </div>
+
+            <input type="hidden" id="questionTypeInput" name="question_type" value="general">
+            <button type="submit" class="btn btn-primary btn-sm">ارسال سوال</button>
+        </form>
+
+        <!-- پیام بارگذاری -->
+        <div id="loadingMessage" class="loading-message">در حال بارگذاری...</div>
+
+        <!-- نمایش پاسخ -->
+        <div id="answerSection" class="answer-section mt-4">
+            <div class="answer-card" id="answerText"></div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+$(document).ready(function() {
+    $('#questionType').change(function() {
+        var selectedType = $(this).val();
+
+        if (selectedType === 'specific') {
+            $('#specific-fields').show();
+            $('#keywords-section').hide();
+            $('#questionTypeInput').val('specific');
+        } else {
+            $('#specific-fields').hide();
+            $('#keywords-section').show();
+            $('#questionTypeInput').val('general');
+        }
+    });
+
+    $('#useKeywords').change(function() {
+        if ($(this).is(':checked')) {
+            $('#keywordsForm').show();
+        } else {
+            $('#keywordsForm').hide();
+        }
+    });
+
+    $('#titleSelect').change(function() {
+        var selectedTitle = $(this).val();
+        if (selectedTitle) {
+            $.ajax({
+                url: '/get_content/',
+                type: 'GET',
+                data: { title: selectedTitle },
+                success: function(data) {
+                    if (data.error) {
+                        $('#contentDisplay').hide();
+                        alert(data.error);
+                    } else {
+                        $('#contentTitle').text(data.title);
+                        $('#contentLead').text(data.lead);
+                        $('#contentText').html(data.content);
+                        $('#contentDisplay').show();
+                    }
+                },
+                error: function(xhr) {
+                    $('#contentDisplay').hide();
+                    alert('خطا در بارگذاری محتوای عنوان');
+                }
+            });
+        } else {
+            $('#contentDisplay').hide();
+        }
+    });
+
+    $('#question-form').submit(function(event) {
+        event.preventDefault();
+
+        var questionType = $('#questionTypeInput').val();
+        var title = $('#titleSelect').val();
+        var question = $('#questionInput').val();
+        var keywords = $('#keywordsInput').val().split(',').map(keyword => keyword.trim()).filter(keyword => keyword);
+
+        $('#loadingMessage').show();
+
+        $.ajax({
+            url: '/ask_question/',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+            },
+            data: JSON.stringify({
+                question_type: questionType,
+                title: title,
+                question: question,
+                keywords: keywords
+            }),
+            success: function(response) {
+                $('#loadingMessage').hide();
+                $('#answerText').text(response.answer);
+                $('#answerSection').show();
+
+
+                $('#questionHistory').prepend('<li data-id="' + response.question_id + '">' + response.question_text + '<div class="answer-text" id="answer-' + response.question_id + '" style="display: none;">' + response.answer + '</div></li>');
+            },
+            error: function(xhr) {
+                $('#loadingMessage').hide();
+                var errorMsg = 'خطا در ارسال سوال';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.error || errorMsg;
+                } catch (e) {
+                    console.error('خطا در تجزیه پاسخ خطا:', e);
+                }
+                $('#answerText').text(errorMsg);
+                $('#answerSection').show();
+            }
+        });
+    });
+
+
+    $('#questionHistory').on('click', 'li', function() {
+        var questionId = $(this).data('id');
+        var answerDiv = $('#answer-' + questionId);
+
+
+        $('#questionHistory .answer-text').not(answerDiv).hide();
+
+        if (answerDiv.is(':visible')) {
+            answerDiv.hide();
+        } else {
+            answerDiv.show();
+        }
+    });
+
+    function loadQuestionHistory() {
+        $.ajax({
+            url: '/get_question_history/',
+            type: 'GET',
+            success: function(response) {
+                $('#questionHistory').empty();
+
+                response.questions.forEach(function(question) {
+                    console.log('Question:', question);
+                    var answerText = question.answer ? question.answer : 'بدون پاسخ';
+                    var answerDiv = '<div class="answer-text" id="answer-' + question.id + '" style="display: none;">' + answerText + '</div>';
+                    $('#questionHistory').append('<li data-id="' + question.id + '">' + question.text + answerDiv + '</li>');
+                });
+            },
+            error: function(xhr) {
+                console.log('خطا در بارگذاری تاریخچه سوالات:', xhr.responseText);
+            }
+        });
+    }
+
+    loadQuestionHistory();
+});
+    </script>
+
+</body>
+</html>
